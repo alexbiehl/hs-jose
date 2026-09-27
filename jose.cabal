@@ -10,11 +10,14 @@ description:
   .
   The JSON Web Signature (JWS; RFC 7515) implementation is complete.
   .
+  The JSON Web Encryption (JWE; RFC 7516) implementation supports
+  all content encryption and key management algorithms defined in
+  RFC 7518, and ECDH-ES with X25519 and X448 (RFC 8037).
+  Compression (the @"zip"@ header parameter) is not supported.
+  .
   EdDSA signatures (RFC 8037) and secp256k1 (RFC 8812) are supported.
   .
   JWK Thumbprint (RFC 7638) is supported.
-  .
-  JSON Web Encryption (JWE; RFC 7516) is not yet implemented.
   .
   The __ECDSA implementation is vulnerable to timing attacks__ and
   should only be used for verification.
@@ -122,6 +125,7 @@ test-suite tests
   other-modules:
     AESKW
     Examples
+    JWE
     JWK
     JWS
     JWT
@@ -163,6 +167,7 @@ executable jose-example
   main-is:  Main.hs
   other-modules:
     KeyDB
+    JWE
     JWS
 
   build-depends:

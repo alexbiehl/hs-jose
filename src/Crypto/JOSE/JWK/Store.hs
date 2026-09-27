@@ -70,6 +70,7 @@ instance (MonadIO m, t'Crypto.JOSE.Header.HasKid' h)
 module Crypto.JOSE.JWK.Store
   (
     VerificationKeyStore(..)
+  , DecryptionKeyStore(..)
   ) where
 
 import Crypto.JOSE.JWK (JWK, JWKSet(..))
@@ -101,3 +102,31 @@ instance Applicative m => VerificationKeyStore m h s JWK where
 --
 instance Applicative m => VerificationKeyStore m h s JWKSet where
   getVerificationKeys _ _ (JWKSet xs) = pure xs
+
+
+-- | Decryption keys.  Lookup operates in effect @m@ with access
+-- to the JWE header of type @h@.  Unlike 'VerificationKeyStore',
+-- the payload is not available because it has not yet been
+-- decrypted.
+--
+-- The returned keys are not guaranteed to be used, e.g. if the JWK
+-- @"use"@ or @"key_ops"@ field does not allow use for decryption.
+--
+class DecryptionKeyStore m h a where
+  -- | Look up decryption keys by JWE header.
+  getDecryptionKeys
+    :: h          -- ^ JWE header
+    -> a
+    -> m [JWK]
+
+-- | Use a 'JWK' as a 'DecryptionKeyStore'.  Header is ignored.
+-- No filtering is performed.
+--
+instance Applicative m => DecryptionKeyStore m h JWK where
+  getDecryptionKeys _ k = pure [k]
+
+-- | Use a 'JWKSet' as a 'DecryptionKeyStore'.  Returns all keys in
+-- the set; header is ignored.  No filtering is performed.
+--
+instance Applicative m => DecryptionKeyStore m h JWKSet where
+  getDecryptionKeys _ (JWKSet xs) = pure xs

@@ -13,6 +13,7 @@ import Control.Lens (preview, re, review, set, view)
 
 import Crypto.JWT
 
+import JWE (doJweEncrypt, doJweDecrypt)
 import JWS (doJwsSign, doJwsVerify)
 import KeyDB
 
@@ -23,6 +24,8 @@ main = do
     "jwk-gen" -> doGen (tail args)
     "jws-sign" -> doJwsSign (tail args)
     "jws-verify" -> doJwsVerify (tail args)
+    "jwe-encrypt" -> doJweEncrypt (tail args)
+    "jwe-decrypt" -> doJweDecrypt (tail args)
     "jwt-sign" -> doJwtSign (tail args)
     "jwt-verify" -> doJwtVerify (tail args)
     "jwk-thumbprint" -> doThumbprint (tail args)

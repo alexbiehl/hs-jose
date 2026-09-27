@@ -86,6 +86,7 @@ module Crypto.JOSE.JWK
   , checkJWK
   , negotiateJWSAlg
   , bestJWSAlg
+  , bestJWEAlg
 
   , module Crypto.JOSE.JWA.JWK
   ) where
@@ -420,6 +421,44 @@ chooseJWSAlg jwk allowed = case view jwkMaterial jwk of
   where
     ok alg = maybe True (alg `elem`) allowed
     negoFail = throwing _AlgorithmMismatch "Algorithm negotation failed"
+
+
+-- | Choose the cryptographically strongest JWE key management
+-- algorithm for a given key.  The JWK "alg" algorithm parameter is
+-- ignored.
+--
+-- - RSA keys use @RSA-OAEP-256@.
+-- - EC keys (except @secp256k1@) and X25519\/X448 keys use @ECDH-ES@.
+-- - Symmetric keys of 128, 192 or 256 bits use @A128KW@, @A192KW@
+--   or @A256KW@ respectively.
+--
+-- Throws an error if the key is too small or cannot be used for
+-- key management.
+--
+bestJWEAlg
+  :: (MonadError e m, AsError e)
+  => JWK
+  -> m JWA.JWE.Alg
+bestJWEAlg jwk = case view jwkMaterial jwk of
+  ECKeyMaterial k -> case view ecCrv k of
+    Secp256k1 -> throwing _KeyMismatch "Cannot use secp256k1 key for ECDH-ES"
+    _         -> pure JWA.JWE.ECDH_ES
+  RSAKeyMaterial k
+    | n < 2 ^ (2040 :: Integer) -> throwing_ _KeySizeTooSmall
+    | otherwise                 -> pure JWA.JWE.RSA_OAEP_256
+    where
+      Types.Base64Integer n = view rsaN k
+  OctKeyMaterial (OctKeyParameters (Types.Base64Octets k)) ->
+    case B.length k of
+      16 -> pure JWA.JWE.A128KW
+      24 -> pure JWA.JWE.A192KW
+      32 -> pure JWA.JWE.A256KW
+      _  -> throwing _KeyMismatch "Symmetric key size not suitable for AES Key Wrap"
+  OKPKeyMaterial k -> case k of
+    (X25519Key _ _)   -> pure JWA.JWE.ECDH_ES
+    (X448Key _ _)     -> pure JWA.JWE.ECDH_ES
+    (Ed25519Key _ _)  -> throwing _KeyMismatch "Cannot use Ed25519 key for ECDH-ES"
+    (Ed448Key _ _)    -> throwing _KeyMismatch "Cannot use Ed448 key for ECDH-ES"
 
 
 -- | Compute the JWK Thumbprint of a JWK

@@ -118,6 +118,15 @@ data Error
   | JWSNoSignatures
   -- ^ 'AllValidated' policy active, and there were no signatures on object
   --   that matched the allowed algorithms
+  | JWENoRecipients
+  -- ^ There were no recipients on the object that matched the
+  --   allowed algorithms
+  | JWEIntegrityFailed
+  -- ^ Decryption failed.  Either the key could not be unwrapped, or
+  --   the authentication tag did not verify.
+  | JWEProtectedHeaderMismatch
+  -- ^ When encrypting to multiple recipients, the protected header
+  --   parameters of all recipients must be identical
   deriving (Eq, Show)
 makeClassyPrisms ''Error
 

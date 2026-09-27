@@ -20,6 +20,7 @@ import Crypto.JOSE (vulnerableToHashFlood)
 
 import AESKW
 import Examples
+import JWE
 import JWK
 import JWS
 import JWT
@@ -40,6 +41,7 @@ unitTestsIO = do
       [ testSpec "Types" Types.spec
       , testSpec "JWK" JWK.spec
       , testSpec "JWS" JWS.spec
+      , testSpec "JWE" JWE.spec
       , testSpec "JWT" JWT.spec
       , testSpec "Examples" Examples.spec
       , testSpec "Security" securitySpec
