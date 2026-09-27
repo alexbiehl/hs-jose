@@ -1,3 +1,53 @@
+## Version 0.14 (unreleased)
+
+- Implemented JSON Web Encryption (JWE; RFC 7516).  The new
+  `Crypto.JOSE.JWE` module follows the same design as
+  `Crypto.JOSE.JWS`: the `JWE t p a` type is parameterised over the
+  recipient container, header protection and header types, with
+  `GeneralJWE`, `FlattenedJWE` and `CompactJWE` synonyms.  Use
+  `encryptJWE` (or `encryptJWEWithAAD`) to create a JWE and
+  `decryptJWE` or `decryptJWE'` to decrypt one.  Both the JSON
+  serialisations and the compact serialisation are supported.
+
+  All content encryption algorithms (`A128CBC-HS256`, `A192CBC-HS384`,
+  `A256CBC-HS512`, `A128GCM`, `A192GCM`, `A256GCM`) and all key
+  management algorithms (`RSA1_5`, `RSA-OAEP`, `RSA-OAEP-256`,
+  `A128KW`, `A192KW`, `A256KW`, `dir`, `ECDH-ES`, `ECDH-ES+A128KW`,
+  `ECDH-ES+A192KW`, `ECDH-ES+A256KW`, `A128GCMKW`, `A192GCMKW`,
+  `A256GCMKW`, `PBES2-HS256+A128KW`, `PBES2-HS384+A192KW` and
+  `PBES2-HS512+A256KW`) defined in RFC 7518 are implemented.
+  ECDH-ES supports the NIST curves and X25519/X448 (RFC 8037).
+  The `"zip"` (compression) header parameter is parsed but
+  compression is not implemented.
+
+  The default decryption settings (`defaultDecryptionSettings`)
+  exclude `RSA1_5`, which is vulnerable to adaptive chosen-ciphertext
+  attacks.
+
+- Added `DecryptionKeyStore` class to `Crypto.JOSE.JWK.Store`, with
+  instances for `JWK` and `JWKSet`.  It is analogous to
+  `VerificationKeyStore`, but the payload is not available because
+  it has not yet been decrypted.
+
+- Added `Crypto.JOSE.JWK.bestJWEAlg`, which chooses a JWE key
+  management algorithm for a key, and `Crypto.JOSE.JWE.makeJWEHeader`.
+
+- Added `JWENoRecipients`, `JWEIntegrityFailed` and
+  `JWEProtectedHeaderMismatch` constructors to the `Error` type.
+
+- `Crypto.JOSE.JWA.JWE` now exports the content encryption and key
+  management primitives, and re-exports the JWE `Alg` type.  The
+  never-functional `AlgWithParams`, `ECDHParameters`,
+  `AESGCMParameters` and `PBES2Parameters` types were removed; the
+  corresponding header parameters are now fields of `JWEHeader`.
+
+- `Crypto.JOSE.JWA.JWK` now exports `rsaPrivateKey`.
+
+- The `Crypto.JOSE` prelude module now re-exports `Crypto.JOSE.JWE`,
+  except for the JWE `Alg` type (whose name conflicts with the JWS
+  `Alg` type).  The JWE `Alg` constructors are re-exported.
+
+
 ## Version 0.13 (2026-06-06)
 
 - Update to *crypton >= 1.1.0* and *ram*.  There are no

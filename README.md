@@ -5,7 +5,12 @@ Encryption (JOSE)](https://datatracker.ietf.org/wg/jose/) and [JSON
 Web Token (JWT)](https://tools.ietf.org/html/rfc7519).
 
 The JSON Web Signature (JWS; RFC 7515) implementation is complete.
-JSON Web Encryption (JWE; RFC 7516) is not yet implemented.
+
+The JSON Web Encryption (JWE; RFC 7516) implementation supports all
+content encryption and key management algorithms defined in RFC
+7518 (JSON Web Algorithms), including ECDH-ES with X25519 and X448
+(RFC 8037).  Compression (the `"zip"` header parameter) is not
+supported.
 
 **EdDSA** signatures (RFC 8037) and secp256k1 signatures (RFC 8812)
 are supported.
@@ -39,7 +44,15 @@ and the following known **not-vulnerabilities**:
 
 - The library is not vulnerable to ECDH [**invalid curve attacks**](
   https://blogs.adobe.com/security/2017/03/critical-vulnerability-uncovered-in-json-encryption.html)
-  because JWE is not implemented.
+  because the ephemeral public key (`"epk"`) is validated to be a
+  point on the expected curve before it is used.
+
+- The default JWE decryption settings reject the **`RSA1_5`**
+  algorithm, which is vulnerable to adaptive chosen-ciphertext
+  attacks.  When it is explicitly enabled, decryption failures are
+  masked by substituting a random content encryption key, as
+  [recommended by RFC 7516](
+  https://tools.ietf.org/html/rfc7516#section-11.5).
 
 
 ## Interoperability issues

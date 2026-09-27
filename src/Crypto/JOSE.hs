@@ -16,12 +16,19 @@
 
 Prelude for the  library.
 
+The JWE 'Crypto.JOSE.JWA.JWE.Alg' type is not re-exported from this
+module because its name conflicts with the JWS
+'Crypto.JOSE.JWA.JWS.Alg' type.  The JWE @Alg@ constructors /are/
+re-exported; if you need to refer to the type itself, import it
+qualified from "Crypto.JOSE.JWA.JWE" or "Crypto.JOSE.JWE".
+
 -}
 module Crypto.JOSE
   (
     vulnerableToHashFlood
   , module Crypto.JOSE.Compact
   , module Crypto.JOSE.Error
+  , module Crypto.JOSE.JWE
   , module Crypto.JOSE.JWK
   , module Crypto.JOSE.JWK.Store
   , module Crypto.JOSE.JWS
@@ -29,6 +36,7 @@ module Crypto.JOSE
 
 import Crypto.JOSE.Compact
 import Crypto.JOSE.Error
+import Crypto.JOSE.JWE hiding (Alg)
 import Crypto.JOSE.JWK
 import Crypto.JOSE.JWK.Store
 import Crypto.JOSE.JWS

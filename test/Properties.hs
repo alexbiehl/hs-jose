@@ -23,11 +23,12 @@ module Properties
 
 import Control.Monad.IO.Class
 
-import Control.Lens ((&), set, view)
+import Control.Lens ((&), over, set, view)
 import Crypto.Number.Basic (log2)
 import Crypto.Random
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import qualified Data.ByteString as B
+import qualified Data.Set as S
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -36,6 +37,11 @@ import Test.Tasty
 import Test.Tasty.Hedgehog
 
 import Crypto.JOSE.Types
+import qualified Crypto.JOSE.JWA.JWE as JWE
+import Crypto.JOSE.JWA.JWE (Alg(..), Enc(..))
+import Crypto.JOSE.JWE
+  ( newJWEHeader, jweP2c, encryptJWE, decryptJWE
+  , defaultDecryptionSettings, decryptionSettingsAlgorithms )
 import Crypto.JOSE.JWK
 import Crypto.JOSE.JWS
 
@@ -49,6 +55,7 @@ properties = testGroup "Properties"
   , let n = "JWK round-trip" in testPropertyNamed n n (prop_roundTrip genJWK')
   , let n = "RSA gen, sign and verify" in testPropertyNamed n n prop_rsaSignAndVerify
   , let n = "gen, sign with best alg, verify" in testPropertyNamed n n prop_bestJWSAlg
+  , let n = "JWE gen, encrypt and decrypt" in testPropertyNamed n n prop_jweRoundTrip
   ]
 
 genBigInteger :: Gen Integer
@@ -93,7 +100,7 @@ genKeyMaterialGenParam :: Gen KeyMaterialGenParam
 genKeyMaterialGenParam = Gen.choice
   [ ECGenParam <$> genCrv
   , RSAGenParam <$> Gen.element ((`div` 8) <$> [2048, 3072, 4096])
-  , OctGenParam <$> liftA2 (+) (Gen.integral (Range.exponential 0 64)) (Gen.element [32, 48, 64])
+  , OctGenParam <$> ((+) <$> Gen.integral (Range.exponential 0 64) <*> Gen.element [32, 48, 64])
   , OKPGenParam <$> genOKPCrv
   ]
 
@@ -117,6 +124,57 @@ prop_bestJWSAlg = property $ do
       msg' === msg
 
 
+
+
+genEnc :: Gen JWE.Enc
+genEnc = Gen.element
+  [A128CBC_HS256, A192CBC_HS384, A256CBC_HS512, A128GCM, A192GCM, A256GCM]
+
+-- | Generate a JWE key management algorithm along with parameters
+-- for generating a suitable key.  For "dir", the key size depends
+-- on the content encryption algorithm.
+--
+genJWEAlgAndKeyParam :: JWE.Enc -> Gen (JWE.Alg, KeyMaterialGenParam)
+genJWEAlgAndKeyParam enc_ = Gen.choice
+  [ (,) <$> Gen.element [RSA1_5, RSA_OAEP, RSA_OAEP_256] <*> pure (RSAGenParam (2048 `div` 8))
+  , Gen.element [(A128KW, OctGenParam 16), (A192KW, OctGenParam 24), (A256KW, OctGenParam 32)]
+  , Gen.element [(A128GCMKW, OctGenParam 16), (A192GCMKW, OctGenParam 24), (A256GCMKW, OctGenParam 32)]
+  , (,)
+    <$> Gen.element [ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW]
+    <*> Gen.choice
+      [ ECGenParam <$> Gen.element [P_256, P_384, P_521]
+      , OKPGenParam <$> Gen.element [X25519, X448]
+      ]
+  , (,)
+    <$> Gen.element [PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW]
+    <*> (OctGenParam <$> Gen.integral (Range.linear 1 64))
+  , pure (Dir, OctGenParam (JWE.cekLength enc_))
+  ]
+
+prop_jweRoundTrip :: Property
+prop_jweRoundTrip = property $ do
+  msg <- forAll $ Gen.bytes (Range.linear 0 100)
+  enc_ <- forAll genEnc
+  (alg_, genParam) <- forAll (genJWEAlgAndKeyParam enc_)
+  k <- evalIO $ genJWK genParam
+  collect (alg_, enc_)
+  let
+    -- use a small PBES2 iteration count to keep the test fast
+    p2c = case alg_ of
+      PBES2_HS256_A128KW -> Just 1000
+      PBES2_HS384_A192KW -> Just 1000
+      PBES2_HS512_A256KW -> Just 1000
+      _ -> Nothing
+    h = newJWEHeader (Protected, alg_) (Protected, enc_)
+      & set jweP2c (HeaderParam Protected <$> p2c)
+    conf = defaultDecryptionSettings
+      & over decryptionSettingsAlgorithms (S.insert RSA1_5)
+  msg' <- evalExceptT $ unwrapJOSE
+    ( encryptJWE msg [(h, k)]
+      >>= decryptJWE conf k
+      :: JOSE Error (PropertyT IO) B.ByteString
+    )
+  msg' === msg
 
 
 genRSAPrivateKeyOthElem :: Gen RSAPrivateKeyOthElem
