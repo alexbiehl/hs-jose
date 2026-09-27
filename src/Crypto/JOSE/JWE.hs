@@ -561,17 +561,30 @@ data JWE t p a = JWE
 -- the /compact serialisation/.  Headers may be 'Protected'
 -- or 'Unprotected'.
 --
+-- Corresponds to the /General JWE JSON Serialization/ syntax
+-- (<https://tools.ietf.org/html/rfc7516#section-7.2.1 RFC 7516 §7.2.1>).
+-- When there is exactly one recipient, the flattened syntax is
+-- used when encoding.
+--
 type GeneralJWE = JWE [] OptionalProtection
 
 -- | A JWE with one recipient, which uses the
 -- /flattened serialisation/.  Headers may be 'Protected'
 -- or 'Unprotected'.
 --
+-- Corresponds to the /Flattened JWE JSON Serialization/ syntax
+-- (<https://tools.ietf.org/html/rfc7516#section-7.2.2 RFC 7516 §7.2.2>).
+--
 type FlattenedJWE = JWE Identity OptionalProtection
 
 -- | A JWE with one recipient which only allows protected
 -- parameters.  Can use the /flattened serialisation/ or
 -- the /compact serialisation/.
+--
+-- Corresponds to the /JWE Compact Serialization/
+-- (<https://tools.ietf.org/html/rfc7516#section-7.1 RFC 7516 §7.1>),
+-- which permits only a single recipient and only protected header
+-- parameters.
 --
 type CompactJWE = JWE Identity RequiredProtection
 
@@ -584,6 +597,7 @@ instance (Show (t (Recipient p a))) => Show (JWE t p a) where
     "JWE " <> show iv <> " " <> show aad <> " " <> show c
       <> " " <> show tag <> " " <> show rs
 
+-- | Fold over the recipients of a JWE.
 recipients :: Foldable t => Fold (JWE t p a) (Recipient p a)
 recipients = folding (\(JWE _ _ _ _ _ rs) -> rs)
 
@@ -992,6 +1006,7 @@ data DecryptionSettings = DecryptionSettings
   (S.Set Enc)
   Int
 
+-- | Types that carry 'DecryptionSettings'.
 class HasDecryptionSettings a where
   decryptionSettings :: Lens' a DecryptionSettings
 
